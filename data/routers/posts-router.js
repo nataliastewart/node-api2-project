@@ -5,8 +5,9 @@ const Posts = require("../db.js");
 //import router from express
 const router = express.Router();
 
-//endpoints start here: /api/posts
+//------->>endpoints start here: /api/posts<<----------
 
+//When the client makes a GET request to /api/posts:
 router.get("/", (req, res) => {
   Posts.find(req.query)
     .then((posts) => {
@@ -18,9 +19,7 @@ router.get("/", (req, res) => {
     });
 });
 
-////////
-
-// endpoint for /api/posts/:id
+//When the client makes a GET request to /api/posts/:id:
 router.get("/:id", (req, res) => {
   Posts.findById(req.params.id)
     .then((post) => {
@@ -39,66 +38,68 @@ router.get("/:id", (req, res) => {
     });
 });
 
+//When the client makes a POST request to /api/posts:
 router.post("/", (req, res) => {
-  Posts.add(req.body)
-    .then((hub) => {
-      res.status(201).json(hub);
-    })
-    .catch((error) => {
-      // log error to database
-      console.log(error);
-      res.status(500).json({
-        message: "Error adding the hub",
-      });
+  const post = req.body;
+
+  if (!post.title || !post.contents) {
+    res.status(400).json({
+      errorMessage: "Please provide title and contents for the post.",
     });
+  } else {
+    try {
+      Posts.insert(post);
+      res.status(201).json(post);
+    } catch {
+      res.status(500).json({
+        error: "There was an error while saving the post to the database",
+      });
+    }
+  }
 });
+
+//When the client makes a DELETE request to /api/posts/:id:
 
 router.delete("/:id", (req, res) => {
   Posts.remove(req.params.id)
-    .then((count) => {
-      if (count > 0) {
-        res.status(200).json({ message: "The hub has been nuked" });
+    .then((post) => {
+      if (post && post > 0) {
+        res.status(200).json({ message: "The post has been deleted" });
       } else {
-        res.status(404).json({ message: "The hub could not be found" });
+        res.status(404).json({ message: "The post could not be found" });
       }
     })
     .catch((error) => {
       // log error to database
       console.log(error);
       res.status(500).json({
-        message: "Error removing the hub",
+        message: "Error removing the post",
       });
     });
 });
 
+//When the client makes a PUT request to /api/posts/:id:
 router.put("/:id", (req, res) => {
-  const changes = req.body;
-  Posts.update(req.params.id, changes)
-    .then((hub) => {
-      if (hub) {
-        res.status(200).json(hub);
+  if (!req.body.title || !req.body.contents) {
+    res
+      .status(400)
+      .json({ errorMessage: "Please provide title and contents for the post" });
+  } else {
+  }
+  Posts.update(req.params.id, req.body)
+    .then((item) => {
+      if (item) {
+        res.status(200).json({ ...req.body, id: req.params.id });
       } else {
-        res.status(404).json({ message: "The hub could not be found" });
+        res
+          .status(404)
+          .json({ message: "The post with the speciefied ID does not exist" });
       }
     })
-    .catch((error) => {
-      // log error to database
-      console.log(error);
-      res.status(500).json({
-        message: "Error updating the hub",
-      });
-    });
-});
-
-router.get("/:id/messages", function (req, res) {
-  Posts.findHubMessages(req.params.id)
-    .then((messages) => {
-      res.status(200).json(messages);
-    })
-    .catch((error) => {
-      //log to a data base or a monitoring system
-
-      res.status(500).json({ message: "error getting messages" });
+    .catch(() => {
+      res
+        .status(500)
+        .json({ error: "The post informationd could not be modified." });
     });
 });
 
